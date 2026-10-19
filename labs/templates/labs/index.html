@@ -1,0 +1,25 @@
+{% extends "labs/base.html" %}
+{% block content %}
+  <h1>Web Security Academy (Learning)</h1>
+  <p class="muted">Learn common web bugs. See "before fix" and "after fix" side by side.
+    Try each one, and look at the code and the fix.</p>
+
+  <div class="note" style="margin:16px 0 8px">
+    This site has <strong>unsafe code on purpose</strong>, for learning.
+    Run it only on your computer (127.0.0.1). Do not put it online.
+  </div>
+
+  {% for category, labs in grouped.items %}
+    <div class="cat">{{ category }}</div>
+    <div class="grid">
+      {% for lab in labs %}
+        <div class="card">
+          <h3><a href="{% url 'lab_detail' lab.slug %}">{{ lab.no }}. {{ lab.title }}</a></h3>
+          <p><span class="badge lv">{{ lab.difficulty }}</span></p>
+          <p class="muted" style="font-size:13px">{{ lab.summary }}</p>
+          <a class="btn" href="{% url 'lab_detail' lab.slug %}">See more →</a>
+        </div>
+      {% endfor %}
+    </div>
+  {% endfor %}
+{% endblock %}

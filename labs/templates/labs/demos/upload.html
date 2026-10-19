@@ -1,0 +1,41 @@
+{% extends "labs/demos/_demo_base.html" %}
+{% block demo %}
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="row">
+      <label>File to upload</label>
+      <input type="file" name="file">
+    </div>
+    <button class="btn {{ mode }}" type="submit">Upload</button>
+  </form>
+
+  {% if error %}
+    <div class="msg ng">{{ error }}</div>
+  {% endif %}
+
+  {% if message %}
+    <div class="msg ok">{{ message }}</div>
+  {% endif %}
+
+  {% if uploaded_url %}
+    <div class="result">
+      <p>Saved URL: <a href="{{ uploaded_url }}" target="_blank">{{ uploaded_url }}</a></p>
+      {% if mode == 'before' %}
+        <p class="muted" style="font-size:13px">
+          Upload a <code>.html</code> file and open the link.
+          The script inside runs in the browser (XSS by upload).</p>
+      {% else %}
+        <p class="muted" style="font-size:13px">
+          Only allowed file types are saved. The file name is random.</p>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <div class="note" style="margin-top:12px">
+    {% if mode == 'before' %}
+      It takes any file type, and keeps the real file name in the open folder.
+    {% else %}
+      It takes only allowed types (.png/.jpg/.jpeg/.gif/.txt). The name is made random.
+    {% endif %}
+  </div>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "labs/demos/_demo_base.html" %}
+{% block demo %}
+  <div class="result" style="margin-bottom:14px">
+    Logged-in user: <b>{{ current.username }}</b>
+    (This user may see only their own account.)
+  </div>
+
+  <form method="get">
+    <div class="row">
+      <label>Account ID</label>
+      <input type="text" name="id" value="{{ account_id }}" placeholder="for example: 1, 2, 3 ...">
+    </div>
+    <button class="btn {{ mode }}" type="submit">Show account</button>
+  </form>
+
+  {% if error %}
+    <div class="msg ng">{{ error }}</div>
+  {% endif %}
+
+  {% if acc %}
+    <div class="result">
+      <h3>Account #{{ acc.pk }}</h3>
+      <table>
+        <tr><th>Name</th><td>{{ acc.full_name }}</td></tr>
+        <tr><th>Money</th><td>{{ acc.balance }} yen</td></tr>
+        <tr><th>Secret memo</th><td>{{ acc.secret_memo }}</td></tr>
+        <tr><th>Owner</th><td>{{ acc.owner.username }}</td></tr>
+      </table>
+      {% if mode == 'before' and acc.owner != current %}
+        <p class="muted" style="font-size:13px;margin-top:10px">
+          This is <b>{{ acc.owner.username }}</b>'s account.
+          It is not yours ({{ current.username }}), but you can see it. This is IDOR.</p>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <h3>For info: all accounts</h3>
+  <table>
+    <tr><th>ID</th><th>Name</th><th>Owner</th></tr>
+    {% for a in all_accounts %}
+      <tr><td>{{ a.pk }}</td><td>{{ a.full_name }}</td><td>{{ a.owner.username }}</td></tr>
+    {% endfor %}
+  </table>
+{% endblock %}
