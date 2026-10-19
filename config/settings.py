@@ -14,6 +14,10 @@ SECRET_KEY = "django-insecure-learning-only-do-not-deploy"
 
 from dotenv import load_dotenv
 
+# プロジェクト直下の .env を読み込む(GEMINI_API_KEY などを供給する)。
+# import だけでは読み込まれないため、必ず呼び出す。.env は .gitignore 済み。
+load_dotenv(BASE_DIR / ".env")
+
 # 脆弱性デモをそのまま見せるため DEBUG=True のまま。公開しない前提。
 DEBUG = True
 
