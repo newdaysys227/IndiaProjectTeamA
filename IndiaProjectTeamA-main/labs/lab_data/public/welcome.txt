@@ -1,2 +1,0 @@
-Welcome. This is a sample file in the open folder.
-Anyone may read files in this folder.
