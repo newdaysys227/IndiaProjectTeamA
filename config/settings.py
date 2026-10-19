@@ -12,7 +12,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # 学習用のため固定キー。公開環境では使わないこと。
 SECRET_KEY = "django-insecure-learning-only-do-not-deploy"
 
-from dotenv import load_env
+from dotenv import load_dotenv
 
 # 脆弱性デモをそのまま見せるため DEBUG=True のまま。公開しない前提。
 DEBUG = True
