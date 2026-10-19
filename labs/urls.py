@@ -40,4 +40,9 @@ urlpatterns = [
 
     # 9. ファイルアップロード
     path("demo/file-upload/<str:mode>/", views.upload_demo, name="lab_demo_upload"),
+
+    # 10. チャットボット機能
+    path("chatbot/", views.chatbot_page, name="chatbot"),
+    path("api/chatbot/", views.chatbot_api, name="chatbot_api"),
+
 ]

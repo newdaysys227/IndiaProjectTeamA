@@ -52,6 +52,23 @@ python manage.py runserver 127.0.0.1:8000
 | alice | alicepass |
 | bob   | bobpass |
 
+## AI Security Assistant
+
+全ページの右下に表示されるフローティングチャットウィジェットから、
+Webセキュリティに関する質問を Gemini API を使ってリアルタイムに質問できます。
+
+- **非同期処理**：ページをリロードせずにバックグラウンドで回答を取得します。
+- **履歴保持**：会話履歴は `localStorage` に最大60件保存され、ページ遷移後も復元されます。
+- **履歴クリア**：チャットヘッダーの 🗑 Clear ボタンで履歴を削除できます。
+
+アシスタントを使用するには、サーバー起動前に `GEMINI_API_KEY` 環境変数を設定してください。
+
+```bash
+# Windows PowerShell
+$env:GEMINI_API_KEY = "your-api-key-here"
+python manage.py runserver 127.0.0.1:8000
+```
+
 ## メモ
 
 - 「対策前」ページは差し替え前提の仮実装です（画面上に🚧の注記があります）。

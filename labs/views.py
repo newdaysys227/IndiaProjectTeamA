@@ -9,6 +9,13 @@
 import os
 import re
 import uuid
+import json
+import logging
+
+from google import genai
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+
 from collections import OrderedDict
 
 from django.conf import settings
@@ -25,6 +32,7 @@ from .models import Account, Comment, Product
 
 PUBLIC_DIR = settings.LAB_DATA_DIR / "public"
 
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # 一覧 / 詳細
@@ -389,3 +397,56 @@ def upload_demo(request, mode):
     return render(request, "labs/demos/upload.html",
                   _lab_ctx("file-upload", mode, message=None,
                            error=None, uploaded_url=None))
+
+# ---------------------------------------------------------------------------
+# 10. Chatbot
+# ---------------------------------------------------------------------------
+
+def chatbot_page(request):
+    return render(request, "labs/chatbot.html")
+
+
+@require_POST
+def chatbot_api(request):
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse(
+            {"error": "Invalid request."},
+            status=400,
+        )
+
+    message = data.get("message", "")
+
+    if not isinstance(message, str) or not message.strip():
+        return JsonResponse(
+            {"error": "Please enter a question."},
+            status=400,
+        )
+
+    if len(message) > 2000:
+        return JsonResponse(
+            {"error": "Question is too long (max 2000 characters)."},
+            status=400,
+        )
+
+    try:
+        client = genai.Client()  # reads GEMINI_API_KEY from environment
+
+        response = client.models.generate_content(
+            model="gemini-3.8-flash",
+            contents=(
+                "You are a beginner-friendly web security tutor. "
+                "Explain vulnerabilities and their defensive measures clearly and concisely. "
+                "Always answer in English. User question: " + message
+            ),
+        )
+
+        return JsonResponse({"answer": response.text or ""})
+
+    except Exception:
+        logger.exception("Gemini API request failed")
+        return JsonResponse(
+            {"error": "Failed to get a response from the AI. Please try again later."},
+            status=502,
+        )

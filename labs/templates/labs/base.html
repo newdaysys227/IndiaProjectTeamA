@@ -70,6 +70,66 @@
     .draft{background:#2a1f05;border:1px solid #a16207;color:#fde68a;border-radius:8px;
       padding:10px 14px;font-size:13px;margin-bottom:16px}
     .result{background:#0b1222;border:1px solid var(--line);border-radius:8px;padding:14px;margin-top:12px}
+
+    /* ── フローティング チャットウィジェット ── */
+    #chat-widget{position:fixed;bottom:24px;right:24px;z-index:9999;font-family:"Segoe UI","Hiragino Kaku Gothic ProN",Meiryo,sans-serif}
+    #chat-toggle-btn{
+      width:56px;height:56px;border-radius:50%;border:none;cursor:pointer;
+      background:linear-gradient(135deg,#38bdf8,#6366f1);
+      color:#fff;font-size:26px;display:flex;align-items:center;justify-content:center;
+      box-shadow:0 4px 16px rgba(56,189,248,.45);
+      transition:transform .2s,box-shadow .2s;
+    }
+    #chat-toggle-btn:hover{transform:scale(1.1);box-shadow:0 6px 20px rgba(56,189,248,.6)}
+    #chat-window{
+      display:none;flex-direction:column;
+      width:360px;height:500px;
+      background:#111827;border:1px solid #334155;border-radius:16px;
+      box-shadow:0 8px 32px rgba(0,0,0,.6);
+      overflow:hidden;margin-bottom:12px;
+    }
+    #chat-window.open{display:flex}
+    #chat-header{
+      background:linear-gradient(90deg,#1e40af,#4f46e5);
+      padding:12px 16px;display:flex;align-items:center;justify-content:space-between;
+      flex-shrink:0;
+    }
+    #chat-header .title{font-weight:700;font-size:14px;color:#fff;display:flex;align-items:center;gap:8px}
+    #chat-header .title::before{content:"🤖"}
+    #chat-close-btn{background:none;border:none;color:#94a3b8;font-size:18px;cursor:pointer;padding:0 4px;line-height:1}
+    #chat-close-btn:hover{color:#fff}
+    #chat-clear-btn{background:none;border:none;color:#94a3b8;font-size:11px;cursor:pointer;padding:2px 8px;
+      border:1px solid #334155;border-radius:6px;transition:color .15s,border-color .15s}
+    #chat-clear-btn:hover{color:#f87171;border-color:#f87171}
+    #chat-messages{
+      flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;
+      scrollbar-width:thin;scrollbar-color:#334155 #111827;
+    }
+    #chat-messages::-webkit-scrollbar{width:5px}
+    #chat-messages::-webkit-scrollbar-track{background:#111827}
+    #chat-messages::-webkit-scrollbar-thumb{background:#334155;border-radius:3px}
+    .chat-bubble{max-width:88%;padding:9px 13px;border-radius:12px;font-size:13px;line-height:1.6;word-break:break-word;white-space:pre-wrap}
+    .chat-bubble.user{background:#1e40af;color:#dbeafe;align-self:flex-end;border-bottom-right-radius:3px}
+    .chat-bubble.bot{background:#1e293b;color:#e2e8f0;align-self:flex-start;border-bottom-left-radius:3px;border:1px solid #334155}
+    .chat-bubble.error{background:#3f1d1d;color:#fca5a5;align-self:flex-start;border:1px solid #ef4444;border-bottom-left-radius:3px}
+    .chat-bubble.thinking{background:#1e293b;color:#64748b;align-self:flex-start;border:1px dashed #334155;font-style:italic;animation:pulse 1.4s ease-in-out infinite}
+    @keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
+    #chat-input-area{
+      display:flex;gap:8px;padding:10px 12px;
+      border-top:1px solid #334155;background:#0f172a;flex-shrink:0;
+    }
+    #chat-input{
+      flex:1;padding:8px 12px;border-radius:8px;border:1px solid #334155;
+      background:#1e293b;color:#e2e8f0;font-size:13px;resize:none;
+      font-family:inherit;line-height:1.4;outline:none;
+    }
+    #chat-input:focus{border-color:#38bdf8}
+    #chat-send-btn{
+      padding:8px 14px;background:linear-gradient(135deg,#38bdf8,#6366f1);
+      border:none;border-radius:8px;color:#fff;font-weight:700;font-size:13px;
+      cursor:pointer;white-space:nowrap;transition:opacity .15s;
+    }
+    #chat-send-btn:disabled{opacity:.5;cursor:not-allowed}
   </style>
 </head>
 <body>
@@ -81,5 +141,166 @@
   <main>
     {% block content %}{% endblock %}
   </main>
+
+  <!-- ── フローティング チャットウィジェット ── -->
+  <div id="chat-widget">
+    <div id="chat-window">
+      <div id="chat-header">
+        <span class="title">AI Security Assistant</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button id="chat-clear-btn" title="Clear history">🗑 Clear</button>
+          <button id="chat-close-btn" title="Close">✕</button>
+        </div>
+      </div>
+      <div id="chat-messages">
+        <div class="chat-bubble bot">Hello! Ask me anything about web security 🔐</div>
+      </div>
+      <div id="chat-input-area">
+        <textarea id="chat-input" rows="1" maxlength="2000" placeholder="Type your question… (Enter to send)"></textarea>
+        <button id="chat-send-btn">Send</button>
+      </div>
+    </div>
+    <button id="chat-toggle-btn" title="Open AI Chat">💬</button>
+  </div>
+
+  <script>
+  (function(){
+    'use strict';
+
+    const STORAGE_KEY = 'chatbot_history_v1';
+    const API_URL     = '{% url "chatbot_api" %}';
+    const CSRF_TOKEN  = '{{ csrf_token }}';
+
+    const widget    = document.getElementById('chat-widget');
+    const toggleBtn = document.getElementById('chat-toggle-btn');
+    const closeBtn  = document.getElementById('chat-close-btn');
+    const clearBtn  = document.getElementById('chat-clear-btn');
+    const chatWin   = document.getElementById('chat-window');
+    const messages  = document.getElementById('chat-messages');
+    const input     = document.getElementById('chat-input');
+    const sendBtn   = document.getElementById('chat-send-btn');
+
+    // ── 履歴管理 ──────────────────────────────
+    function loadHistory() {
+      try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+      catch(e) { return []; }
+    }
+    function saveHistory(hist) {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(hist.slice(-60))); }
+      catch(e) {}
+    }
+
+    // ── バブル描画 ──────────────────────────────
+    function addBubble(role, text) {
+      const div = document.createElement('div');
+      div.className = 'chat-bubble ' + role;
+      div.textContent = text;
+      messages.appendChild(div);
+      messages.scrollTop = messages.scrollHeight;
+      return div;
+    }
+    function addThinking() {
+      const div = document.createElement('div');
+      div.className = 'chat-bubble thinking';
+      div.textContent = 'Thinking…';
+      messages.appendChild(div);
+      messages.scrollTop = messages.scrollHeight;
+      return div;
+    }
+
+    // ── 履歴を画面に復元 ──────────────────────────
+    function renderHistory() {
+      const hist = loadHistory();
+      hist.forEach(function(item){
+        addBubble(item.role, item.text);
+      });
+    }
+
+    // ── 送信処理（非同期） ──────────────────────────
+    async function sendMessage() {
+      const text = input.value.trim();
+      if (!text) return;
+
+      input.value = '';
+      input.style.height = '';
+      sendBtn.disabled = true;
+
+      const hist = loadHistory();
+
+      // ユーザーバブル
+      addBubble('user', text);
+      hist.push({role:'user', text:text});
+
+      // ローディング表示
+      const thinking = addThinking();
+
+      try {
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CSRF_TOKEN,
+          },
+          body: JSON.stringify({message: text}),
+        });
+
+        const data = await res.json();
+
+        thinking.remove();
+
+        if (!res.ok || data.error) {
+          addBubble('error', '❌ ' + (data.error || 'An error occurred.'));
+        } else {
+          addBubble('bot', data.answer);
+          hist.push({role:'bot', text: data.answer});
+          saveHistory(hist);
+        }
+      } catch(e) {
+        thinking.remove();
+        addBubble('error', '❌ A network error occurred. Please try again.');
+      } finally {
+        sendBtn.disabled = false;
+        input.focus();
+      }
+    }
+
+    // ── イベント ──────────────────────────────
+    toggleBtn.addEventListener('click', function(){
+      const isOpen = chatWin.classList.contains('open');
+      chatWin.classList.toggle('open');
+      toggleBtn.textContent = isOpen ? '💬' : '✕';
+      if (!isOpen) { input.focus(); }
+    });
+
+    closeBtn.addEventListener('click', function(){
+      chatWin.classList.remove('open');
+      toggleBtn.textContent = '💬';
+    });
+
+    clearBtn.addEventListener('click', function(){
+      if (!confirm('Clear all chat history?')) return;
+      localStorage.removeItem(STORAGE_KEY);
+      messages.innerHTML = '<div class="chat-bubble bot">Hello! Ask me anything about web security 🔐</div>';
+    });
+
+    sendBtn.addEventListener('click', sendMessage);
+
+    input.addEventListener('keydown', function(e){
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    // textarea の自動高さ調整
+    input.addEventListener('input', function(){
+      this.style.height = '';
+      this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+    });
+
+    // ── 起動時に履歴を復元 ──────────────────────
+    renderHistory();
+  })();
+  </script>
 </body>
 </html>

@@ -1,0 +1,17 @@
+{% extends "labs/base.html" %}
+
+{% block title %}Gemini Security Assistant{% endblock %}
+
+{% block content %}
+<h1>Gemini Security Assistant</h1>
+
+<div id="chat" aria-live="polite"></div>
+
+<form id="chat-form">
+  {% csrf_token %}
+  <label for="message">質問を入力してください</label>
+  <input id="message" name="message"
+         type="text" maxlength="2000" required>
+  <button class="btn" type="submit">送信</button>
+</form>
+{% endblock %}

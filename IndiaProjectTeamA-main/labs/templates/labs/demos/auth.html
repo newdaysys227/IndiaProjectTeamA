@@ -1,0 +1,33 @@
+{% extends "labs/demos/_demo_base.html" %}
+{% block demo %}
+  <form method="post">
+    {% csrf_token %}
+    <div class="row">
+      <label>User name</label>
+      <input type="text" name="username" placeholder="admin / alice / nobody ...">
+    </div>
+    <div class="row">
+      <label>Password</label>
+      <input type="password" name="password" placeholder="password">
+    </div>
+    <button class="btn {{ mode }}" type="submit">Log in</button>
+    {% if mode == 'after' %}
+      <a class="btn" href="{% url 'lab_demo_auth_reset' mode %}">Reset try count</a>
+    {% endif %}
+  </form>
+
+  {% if msg %}
+    <div class="msg {% if success %}ok{% else %}ng{% endif %}">{{ msg }}</div>
+  {% endif %}
+
+  {% if mode == 'before' %}
+    <div class="note">
+      Try a real user (for example <code>admin</code>) and a fake user
+      (for example <code>nobody</code>). The message is different.
+      So you can guess real user names from outside.</div>
+  {% else %}
+    <div class="note">
+      The message is the same for all fails. You cannot know if the user name exists.
+      After 5 fails, it locks for a while (fails now: {{ attempts }}).</div>
+  {% endif %}
+{% endblock %}

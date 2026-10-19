@@ -1,0 +1,42 @@
+{% extends "labs/demos/_demo_base.html" %}
+{% block demo %}
+  <form method="get">
+    <div class="row">
+      <label>Search products</label>
+      <input type="search" name="q" value="{{ q }}" placeholder="word (for example: gift)" autofocus>
+    </div>
+    <button class="btn {{ mode }}" type="submit">Search</button>
+  </form>
+
+  {% if executed_sql %}
+    <h3>SQL that ran</h3>
+    <pre>{{ executed_sql }}</pre>
+  {% endif %}
+
+  {% if error %}
+    <div class="msg ng">Error: {{ error }}</div>
+  {% endif %}
+
+  {% if searched %}
+    <div class="result">
+      <h3>Results ({{ rows|length }})</h3>
+      {% if rows %}
+        <table>
+          <tr><th>Name</th><th>Type</th><th>Price</th><th>Shown</th></tr>
+          {% for r in rows %}
+            <tr>
+              <td>{{ r.0 }}</td><td>{{ r.1 }}</td><td>{{ r.2 }} yen</td>
+              <td>{% if r.3 %}Shown{% else %}<span style="color:#fca5a5">Hidden</span>{% endif %}</td>
+            </tr>
+          {% endfor %}
+        </table>
+        {% if mode == 'before' %}
+          <p class="muted" style="font-size:13px;margin-top:10px">
+            If you see "Hidden", the SQL injection worked. You got hidden data.</p>
+        {% endif %}
+      {% else %}
+        <p class="muted">No products found.</p>
+      {% endif %}
+    </div>
+  {% endif %}
+{% endblock %}

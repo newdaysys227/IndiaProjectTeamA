@@ -1,0 +1,30 @@
+{% extends "labs/base.html" %}
+{% block title %}{{ lab.title }} ({% if mode == 'before' %}before{% else %}after{% endif %}){% endblock %}
+{% block content %}
+  <div class="crumb">
+    <a href="{% url 'index' %}">All labs</a> /
+    <a href="{% url 'lab_detail' lab.slug %}">{{ lab.title }}</a> /
+    {% if mode == 'before' %}Before{% else %}After{% endif %}
+  </div>
+  <h1>{{ lab.title }}
+    {% if mode == 'before' %}<span class="tag-before">Before (unsafe)</span>
+    {% else %}<span class="tag-after">After (safe)</span>{% endif %}
+  </h1>
+
+  {% if mode == 'before' %}
+    <div class="draft">🚧 This page is a draft (will be changed later). It shows the unsafe behavior.</div>
+  {% endif %}
+
+  <div class="note" style="margin-bottom:18px">💡 {{ lab.try_hint }}</div>
+
+  {% block demo %}{% endblock %}
+
+  <p style="margin-top:28px">
+    <a href="{% url 'lab_detail' lab.slug %}">← Back to lab</a>
+    {% if mode == 'before' %}
+      | <a href="{{ request.path|cut:'before/' }}after/">See after →</a>
+    {% else %}
+      | <a href="{{ request.path|cut:'after/' }}before/">See before →</a>
+    {% endif %}
+  </p>
+{% endblock %}
