@@ -13,6 +13,8 @@ import json
 import logging
 
 from google import genai
+from google.genai import types
+from .guardrails import execute_ai_query
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 
@@ -417,6 +419,7 @@ def chatbot_api(request):
         )
 
     message = data.get("message", "")
+    provider = data.get("provider", "groq")  # "groq" for blazing speed, "gemini" for deep reasoning
 
     if not isinstance(message, str) or not message.strip():
         return JsonResponse(
@@ -431,21 +434,20 @@ def chatbot_api(request):
         )
 
     try:
-        client = genai.Client()  # reads GEMINI_API_KEY from environment
+        result = execute_ai_query(message=message.strip(), preferred_provider=provider)
+        return JsonResponse({
+            "answer": result["answer"],
+            "provider": result["provider"],
+            "latency": result["latency"],
+            "guardrail_triggered": result["guardrail_triggered"],
+            "guardrail_type": result.get("guardrail_type"),
+        })
 
-        response = client.models.generate_content(
-            model="gemini-3.8-flash",
-            contents=(
-                "You are a beginner-friendly web security tutor. "
-                "Explain vulnerabilities and their defensive measures clearly and concisely. "
-                "Always answer in English. User question: " + message
-            ),
-        )
-
-        return JsonResponse({"answer": response.text or ""})
-
-    except Exception:
-        logger.exception("Gemini API request failed")
+    except ValueError as ve:
+        logger.error("Configuration error in chatbot_api: %s", ve)
+        return JsonResponse({"error": str(ve)}, status=500)
+    except Exception as e:
+        logger.exception("Chatbot request failed: %s", e)
         return JsonResponse(
             {"error": "Failed to get a response from the AI. Please try again later."},
             status=502,

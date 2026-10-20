@@ -136,7 +136,6 @@
   <header class="site">
     <a class="logo" href="{% url 'index' %}">Web Security <span>Academy</span></a>
     <span class="muted" style="font-size:12px">Learn: before and after the fix</span>
-    <span class="warn">⚠ Local only / Do not put online</span>
   </header>
   <main>
     {% block content %}{% endblock %}
@@ -147,7 +146,11 @@
     <div id="chat-window">
       <div id="chat-header">
         <span class="title">AI Security Assistant</span>
-        <div style="display:flex;gap:8px;align-items:center">
+        <div style="display:flex;gap:6px;align-items:center">
+          <select id="chat-provider-select" title="Choose AI Provider" style="background:#0b1222;color:#38bdf8;border:1px solid #334155;border-radius:6px;font-size:11px;padding:3px 6px;cursor:pointer;">
+            <option value="groq" selected>⚡ Groq (Fast ~1s)</option>
+            <option value="gemini">✨ Gemini 3.8 Flash</option>
+          </select>
           <button id="chat-clear-btn" title="Clear history">🗑 Clear</button>
           <button id="chat-close-btn" title="Close">✕</button>
         </div>
@@ -175,6 +178,7 @@
     const toggleBtn = document.getElementById('chat-toggle-btn');
     const closeBtn  = document.getElementById('chat-close-btn');
     const clearBtn  = document.getElementById('chat-clear-btn');
+    const providerSel = document.getElementById('chat-provider-select');
     const chatWin   = document.getElementById('chat-window');
     const messages  = document.getElementById('chat-messages');
     const input     = document.getElementById('chat-input');
@@ -191,10 +195,24 @@
     }
 
     // ── バブル描画 ──────────────────────────────
-    function addBubble(role, text) {
+    function addBubble(role, text, meta) {
       const div = document.createElement('div');
       div.className = 'chat-bubble ' + role;
       div.textContent = text;
+      if (meta) {
+        const metaDiv = document.createElement('div');
+        metaDiv.style.fontSize = '10px';
+        metaDiv.style.marginTop = '6px';
+        metaDiv.style.opacity = '0.85';
+        if (meta.guardrail_triggered) {
+          metaDiv.style.color = '#f87171';
+          metaDiv.textContent = '🛡️ Guardrail: ' + (meta.guardrail_type || 'Triggered');
+        } else if (meta.provider && meta.latency !== undefined) {
+          const icon = meta.provider.toLowerCase().includes('groq') ? '⚡ ' : '✨ ';
+          metaDiv.textContent = icon + meta.provider + ' • ' + meta.latency + 's';
+        }
+        div.appendChild(metaDiv);
+      }
       messages.appendChild(div);
       messages.scrollTop = messages.scrollHeight;
       return div;
@@ -212,7 +230,7 @@
     function renderHistory() {
       const hist = loadHistory();
       hist.forEach(function(item){
-        addBubble(item.role, item.text);
+        addBubble(item.role, item.text, item.meta);
       });
     }
 
@@ -235,13 +253,14 @@
       const thinking = addThinking();
 
       try {
+        const provider = providerSel ? providerSel.value : 'groq';
         const res = await fetch(API_URL, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'X-CSRFToken': CSRF_TOKEN,
           },
-          body: JSON.stringify({message: text}),
+          body: JSON.stringify({message: text, provider: provider}),
         });
 
         const data = await res.json();
@@ -251,8 +270,14 @@
         if (!res.ok || data.error) {
           addBubble('error', '❌ ' + (data.error || 'An error occurred.'));
         } else {
-          addBubble('bot', data.answer);
-          hist.push({role:'bot', text: data.answer});
+          const meta = {
+            provider: data.provider,
+            latency: data.latency,
+            guardrail_triggered: data.guardrail_triggered,
+            guardrail_type: data.guardrail_type
+          };
+          addBubble('bot', data.answer, meta);
+          hist.push({role:'bot', text: data.answer, meta: meta});
           saveHistory(hist);
         }
       } catch(e) {

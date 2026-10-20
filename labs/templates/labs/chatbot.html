@@ -1,17 +1,109 @@
 {% extends "labs/base.html" %}
 
-{% block title %}Gemini Security Assistant{% endblock %}
+{% block title %}AI Security Assistant | Comparison & Guardrails{% endblock %}
 
 {% block content %}
-<h1>Gemini Security Assistant</h1>
+<div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 10px;">
+  <div>
+    <h1>AI Security Assistant</h1>
+    <p class="muted">Ask any questions about web security vulnerabilities, defense strategies, and compare Groq vs Gemini inference speeds.</p>
+  </div>
+  <div style="display: flex; align-items: center; gap: 8px;">
+    <label for="page-provider-select" style="font-size: 12px; margin: 0; color: var(--muted);">Engine:</label>
+    <select id="page-provider-select" style="background:#0b1222;color:#38bdf8;border:1px solid #334155;border-radius:8px;font-size:13px;padding:6px 12px;cursor:pointer;">
+      <option value="groq" selected>⚡ Groq LPU (Ultra-Fast ~1s)</option>
+      <option value="gemini">✨ Gemini 3.8 Flash (Reasoning)</option>
+    </select>
+  </div>
+</div>
 
-<div id="chat" aria-live="polite"></div>
+<div id="page-chat-container" style="max-width: 860px; margin-top: 24px;">
+  <div id="chat" aria-live="polite" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;"></div>
 
-<form id="chat-form">
-  {% csrf_token %}
-  <label for="message">質問を入力してください</label>
-  <input id="message" name="message"
-         type="text" maxlength="2000" required>
-  <button class="btn" type="submit">送信</button>
-</form>
+  <form id="chat-form" style="display: flex; gap: 10px; align-items: flex-end;">
+    {% csrf_token %}
+    <div style="flex: 1;">
+      <label for="message">質問を入力してください / Enter your question:</label>
+      <input id="message" name="message"
+             type="text" maxlength="2000" placeholder="e.g. What is SQL Injection and how can I prevent it?" required>
+    </div>
+    <button class="btn after" id="chat-submit-btn" type="submit" style="height: 42px;">送信</button>
+  </form>
+</div>
+
+<script>
+(function(){
+  const form = document.getElementById('chat-form');
+  const input = document.getElementById('message');
+  const submitBtn = document.getElementById('chat-submit-btn');
+  const providerSel = document.getElementById('page-provider-select');
+  const chatArea = document.getElementById('chat');
+
+  function appendMsg(role, text, isError, meta) {
+    const div = document.createElement('div');
+    div.className = 'chat-bubble ' + (isError ? 'error' : (role === 'user' ? 'user' : 'bot'));
+    div.style.alignSelf = role === 'user' ? 'flex-end' : 'flex-start';
+    div.textContent = text;
+    if (meta) {
+      const metaDiv = document.createElement('div');
+      metaDiv.style.fontSize = '11px';
+      metaDiv.style.marginTop = '6px';
+      metaDiv.style.opacity = '0.85';
+      if (meta.guardrail_triggered) {
+        metaDiv.style.color = '#f87171';
+        metaDiv.textContent = '🛡️ Guardrail: ' + (meta.guardrail_type || 'Triggered');
+      } else if (meta.provider && meta.latency !== undefined) {
+        const icon = meta.provider.toLowerCase().includes('groq') ? '⚡ ' : '✨ ';
+        metaDiv.textContent = icon + meta.provider + ' • ' + meta.latency + 's';
+      }
+      div.appendChild(metaDiv);
+    }
+    chatArea.appendChild(div);
+    return div;
+  }
+
+  form.addEventListener('submit', async function(e){
+    e.preventDefault();
+    const text = input.value.trim();
+    if (!text) return;
+
+    appendMsg('user', text, false);
+    input.value = '';
+    submitBtn.disabled = true;
+
+    const thinking = appendMsg('bot', 'Thinking…', false);
+    thinking.className = 'chat-bubble thinking';
+
+    try {
+      const provider = providerSel ? providerSel.value : 'groq';
+      const res = await fetch('{% url "chatbot_api" %}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': '{{ csrf_token }}',
+        },
+        body: JSON.stringify({message: text, provider: provider}),
+      });
+      const data = await res.json();
+      thinking.remove();
+      if (!res.ok || data.error) {
+        appendMsg('bot', '❌ ' + (data.error || 'An error occurred.'), true);
+      } else {
+        appendMsg('bot', data.answer, false, {
+          provider: data.provider,
+          latency: data.latency,
+          guardrail_triggered: data.guardrail_triggered,
+          guardrail_type: data.guardrail_type
+        });
+      }
+    } catch(err) {
+      thinking.remove();
+      appendMsg('bot', '❌ Network error. Please try again.', true);
+    } finally {
+      submitBtn.disabled = false;
+      input.focus();
+    }
+  });
+})();
+</script>
 {% endblock %}
