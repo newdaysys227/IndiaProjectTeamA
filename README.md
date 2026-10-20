@@ -55,19 +55,28 @@ python manage.py runserver 127.0.0.1:8000
 ## AI Security Assistant
 
 全ページの右下に表示されるフローティングチャットウィジェットから、
-Webセキュリティに関する質問を Gemini API を使ってリアルタイムに質問できます。
+Webセキュリティに関する質問をリアルタイムに質問できます。
+推論エンジンは **Groq（高速）を主体**に、必要に応じて **Gemini** も利用できます。
 
 - **非同期処理**：ページをリロードせずにバックグラウンドで回答を取得します。
 - **履歴保持**：会話履歴は `localStorage` に最大60件保存され、ページ遷移後も復元されます。
 - **履歴クリア**：チャットヘッダーの 🗑 Clear ボタンで履歴を削除できます。
 
-アシスタントを使用するには、サーバー起動前に `GEMINI_API_KEY` 環境変数を設定してください。
+アシスタントを使うには API キーが必要です。
 
-```bash
-# Windows PowerShell
-$env:GEMINI_API_KEY = "your-api-key-here"
-python manage.py runserver 127.0.0.1:8000
+1. キーを取得する（Groq: https://console.groq.com/ ／ Gemini: https://aistudio.google.com/ ）
+2. プロジェクト直下の `.env.example` を `.env` にコピーする
+3. `.env` を開き、自分のキーを記入する
+
 ```
+# .env （.gitignore 済み。コミットされません）
+GROQ_API_KEY=取得したキー
+GEMINI_API_KEY=取得したキー   # 併用する場合
+```
+
+- キーは `.env` から自動で読み込まれます。
+- キーが未設定だと、チャットはエラーメッセージを表示します。
+- 使用モデル／プロバイダは `labs/views.py` で指定しています（既定は Groq、`provider` パラメータで切替可能）。
 
 ## メモ
 
