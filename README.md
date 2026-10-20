@@ -61,13 +61,21 @@ Webセキュリティに関する質問を Gemini API を使ってリアルタ�
 - **履歴保持**：会話履歴は `localStorage` に最大60件保存され、ページ遷移後も復元されます。
 - **履歴クリア**：チャットヘッダーの 🗑 Clear ボタンで履歴を削除できます。
 
-アシスタントを使用するには、サーバー起動前に `GEMINI_API_KEY` 環境変数を設定してください。
+アシスタントを使うには、Gemini の API キーが必要です。
 
-```bash
-# Windows PowerShell
-$env:GEMINI_API_KEY = "your-api-key-here"
-python manage.py runserver 127.0.0.1:8000
+1. API キーを取得する（https://aistudio.google.com/ →「Get API key」）
+2. プロジェクト直下の `.env.example` を `.env` にコピーする
+3. `.env` を開き、自分のキーを記入する
+
 ```
+# .env （.gitignore 済み。コミットされません）
+GEMINI_API_KEY=取得したキー
+```
+
+- キーは `.env` から自動で読み込まれます（`GOOGLE_API_KEY` でも可）。
+- キーが未設定だと、チャットは「API key is missing」と表示されます。
+- 使用モデルは `labs/views.py` の `model=` で指定しています
+  （既定は応答が速く安定した `gemini-flash-lite-latest`）。
 
 ## メモ
 

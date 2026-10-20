@@ -13,6 +13,7 @@ import json
 import logging
 
 from google import genai
+from google.genai import types
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 
@@ -430,23 +431,42 @@ def chatbot_api(request):
             status=400,
         )
 
-    try:
-        client = genai.Client()  # reads GEMINI_API_KEY from environment
+    # APIキーを明示的に読み、存在を検証する(GEMINI_API_KEY 優先、GOOGLE_API_KEY も許容)
+    api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+    if not api_key:
+        logger.error(
+            "Gemini API key is not configured (GEMINI_API_KEY / GOOGLE_API_KEY)."
+        )
+        return JsonResponse(
+            {"error": "AI is not configured (API key is missing)."},
+            status=500,
+        )
 
+    try:
+        client = genai.Client(api_key=api_key)
+
+        # system_instruction で「指示」と「ユーザー入力」を分離する(プロンプトインジェクション対策)
         response = client.models.generate_content(
-            model="gemini-3.8-flash",
-            contents=(
-                "You are a beginner-friendly web security tutor. "
-                "Explain vulnerabilities and their defensive measures clearly and concisely. "
-                "Always answer in English. User question: " + message
+            model="gemini-3.5-flash-lite",
+            contents=message,
+            config=types.GenerateContentConfig(
+                system_instruction=(
+                    "You are a beginner-friendly web security tutor. "
+                    "Explain vulnerabilities and their defensive measures "
+                    "clearly and concisely. Always answer in English."
+                ),
             ),
         )
 
         return JsonResponse({"answer": response.text or ""})
 
-    except Exception:
+    except Exception as exc:
+        # サーバーには詳細をログし、利用者には安全なメッセージを返す。
+        # 開発時(DEBUG)のみ例外種別を返して原因を切り分けやすくする。
         logger.exception("Gemini API request failed")
-        return JsonResponse(
-            {"error": "Failed to get a response from the AI. Please try again later."},
-            status=502,
+        error_msg = (
+            f"AI request failed ({type(exc).__name__})."
+            if settings.DEBUG
+            else "Failed to get a response from the AI. Please try again later."
         )
+        return JsonResponse({"error": error_msg}, status=502)
